@@ -3,8 +3,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <TextureView
-        android:id="@+id/textureView"
+    <eu.domob.heliodos.CameraFeedView
+        android:id="@+id/cameraFeedView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
