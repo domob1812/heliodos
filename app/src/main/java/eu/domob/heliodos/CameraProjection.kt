@@ -8,6 +8,7 @@ class CameraProjection(characteristics: CameraCharacteristics) {
     private val focalLengthMm: Float
     private val sensorSizeMm: SizeF
     private val sensorSizePx: android.util.Size
+    val sensorOrientation: Int
 
     private var viewWidth: Int = 0
     private var viewHeight: Int = 0
@@ -21,6 +22,8 @@ class CameraProjection(characteristics: CameraCharacteristics) {
 
         sensorSizePx = characteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
             ?: android.util.Size(4000, 3000)
+
+        sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
     }
 
     fun setViewSize(width: Int, height: Int) {
@@ -41,17 +44,25 @@ class CameraProjection(characteristics: CameraCharacteristics) {
     fun project(x: Float, y: Float, z: Float): Pair<Float, Float>? {
         if (z <= 0) return null
 
-        // Focal length in pixels (on sensor)
-        val fxSensor = focalLengthMm / sensorSizeMm.width * sensorSizePx.width
-        val fySensor = focalLengthMm / sensorSizeMm.height * sensorSizePx.height
+        // Account for sensor orientation: when sensorOrientation is 90 or 270,
+        // the sensor's native width/height are swapped relative to the displayed image.
+        val isRotated = sensorOrientation == 90 || sensorOrientation == 270
+        val effectiveSensorWidth = if (isRotated) sensorSizePx.height else sensorSizePx.width
+        val effectiveSensorHeight = if (isRotated) sensorSizePx.width else sensorSizePx.height
+        val effectiveSensorMmWidth = if (isRotated) sensorSizeMm.height else sensorSizeMm.width
+        val effectiveSensorMmHeight = if (isRotated) sensorSizeMm.width else sensorSizeMm.height
+
+        // Focal length in pixels (on sensor, in the orientation matching the display)
+        val fxSensor = focalLengthMm / effectiveSensorMmWidth * effectiveSensorWidth
+        val fySensor = focalLengthMm / effectiveSensorMmHeight * effectiveSensorHeight
 
         // Project to sensor coordinates (pinhole model)
-        val xSensor = fxSensor * (x / z) + sensorSizePx.width / 2.0f
-        val ySensor = fySensor * (y / z) + sensorSizePx.height / 2.0f
+        val xSensor = fxSensor * (x / z) + effectiveSensorWidth / 2.0f
+        val ySensor = fySensor * (y / z) + effectiveSensorHeight / 2.0f
 
         // Map sensor coordinates to view coordinates
         // The preview is typically scaled to fill the view (center-crop)
-        val sensorAspect = sensorSizePx.width.toFloat() / sensorSizePx.height
+        val sensorAspect = effectiveSensorWidth.toFloat() / effectiveSensorHeight
         val viewAspect = viewWidth.toFloat() / viewHeight
 
         val xView: Float
@@ -59,16 +70,16 @@ class CameraProjection(characteristics: CameraCharacteristics) {
 
         if (viewAspect > sensorAspect) {
             // View is wider than sensor: sensor height is cropped
-            val scale = viewWidth.toFloat() / sensorSizePx.width
+            val scale = viewWidth.toFloat() / effectiveSensorWidth
             val visibleSensorHeight = viewHeight / scale
-            val cropY = (sensorSizePx.height - visibleSensorHeight) / 2.0f
+            val cropY = (effectiveSensorHeight - visibleSensorHeight) / 2.0f
             xView = xSensor * scale
             yView = (ySensor - cropY) * scale
         } else {
             // View is taller than sensor: sensor width is cropped
-            val scale = viewHeight.toFloat() / sensorSizePx.height
+            val scale = viewHeight.toFloat() / effectiveSensorHeight
             val visibleSensorWidth = viewWidth / scale
-            val cropX = (sensorSizePx.width - visibleSensorWidth) / 2.0f
+            val cropX = (effectiveSensorWidth - visibleSensorWidth) / 2.0f
             xView = (xSensor - cropX) * scale
             yView = ySensor * scale
         }

@@ -56,13 +56,13 @@ class OverlayView @JvmOverloads constructor(
         val camProjection = cameraFeedView?.projection ?: return null
         val R = rotationMatrix ?: return null
 
-        // R maps device coords to world coords, so we use R^T (transpose) to go world -> device
-        // Device coords: X=right, Y=up, Z=out of screen (front)
+        // R maps device coords to world coords, so we use its transpose to go world -> device
+        // Device coords: X=right, Y=up, Z=out of screen
         val deviceX = R[0] * worldX + R[3] * worldY + R[6] * worldZ
         val deviceY = R[1] * worldX + R[4] * worldY + R[7] * worldZ
         val deviceZ = R[2] * worldX + R[5] * worldY + R[8] * worldZ
 
-        // Camera coords: X=right, Y=down, Z=forward (into scene, i.e. out of back of phone)
+        // Camera looks out the back of the phone, with X=right, Y=down, Z=forward
         val cameraX = deviceX
         val cameraY = -deviceY
         val cameraZ = -deviceZ
