@@ -17,6 +17,9 @@ class CameraFeedView @JvmOverloads constructor(
     private var captureSession: CameraCaptureSession? = null
     private var cameraId: String? = null
 
+    var projection: CameraProjection? = null
+        private set
+
     init {
         surfaceTextureListener = this
     }
@@ -47,6 +50,9 @@ class CameraFeedView @JvmOverloads constructor(
                 return
             }
 
+            val characteristics = manager.getCameraCharacteristics(cameraId!!)
+            projection = CameraProjection(characteristics)
+
             manager.openCamera(cameraId!!, object : CameraDevice.StateCallback() {
                 override fun onOpened(camera: CameraDevice) {
                     cameraDevice = camera
@@ -72,8 +78,7 @@ class CameraFeedView @JvmOverloads constructor(
 
     private fun createCameraPreview() {
         val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        val characteristics = manager.getCameraCharacteristics(cameraId!!)
-        val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)!!
+        val map = manager.getCameraCharacteristics(cameraId!!).get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)!!
 
         val previewSize = map.getOutputSizes(SurfaceTexture::class.java).maxByOrNull { it.width * it.height }!!
 
@@ -111,5 +116,6 @@ class CameraFeedView @JvmOverloads constructor(
         captureSession = null
         cameraDevice?.close()
         cameraDevice = null
+        projection = null
     }
 }

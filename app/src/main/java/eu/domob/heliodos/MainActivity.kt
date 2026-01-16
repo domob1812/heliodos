@@ -2,14 +2,21 @@ package eu.domob.heliodos
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var cameraFeedView: CameraFeedView
+    private lateinit var overlayView: OverlayView
+    private lateinit var sensorManager: SensorManager
+    private var rotationSensor: Sensor? = null
 
     companion object {
         private const val CAMERA_PERMISSION_REQUEST = 1
@@ -20,6 +27,11 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         cameraFeedView = findViewById(R.id.cameraFeedView)
+        overlayView = findViewById(R.id.overlayView)
+        overlayView.cameraFeedView = cameraFeedView
+
+        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+        rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_REQUEST)
@@ -44,13 +56,28 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        sensorManager.unregisterListener(this)
         cameraFeedView.closeCamera()
     }
 
     override fun onResume() {
         super.onResume()
+        rotationSensor?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+        }
         if (cameraFeedView.isAvailable && ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             cameraFeedView.openCamera()
         }
+    }
+
+    override fun onSensorChanged(event: SensorEvent) {
+        if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
+            val rotationMatrix = FloatArray(9)
+            SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
+            overlayView.setRotationMatrix(rotationMatrix)
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
     }
 }
