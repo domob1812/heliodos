@@ -69,4 +69,12 @@ class SunPosition(
             seasons.decemberSolstice.toMillisecondsSince1970()
         )
     }
+
+    fun getMarchEquinox(timeMillis: Long): Long {
+        val time = Time.fromMillisecondsSince1970(timeMillis)
+        val year = time.toDateTime().year
+        val seasons = seasons(year)
+
+        return seasons.marchEquinox.toMillisecondsSince1970()
+    }
 }

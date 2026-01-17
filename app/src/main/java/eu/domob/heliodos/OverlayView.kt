@@ -9,6 +9,8 @@ import android.view.View
 import kotlin.math.cos
 import kotlin.math.sin
 
+private const val PATH_POINTS = 20
+
 class OverlayView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -19,6 +21,7 @@ class OverlayView @JvmOverloads constructor(
     private var rotationMatrix: FloatArray? = null
     private var sunPosition: SunPosition? = null
     private var referenceTime: Long = 0
+    private var observerLatitude: Double = 0.0
 
     private val paintYellow = Paint().apply {
         color = Color.YELLOW
@@ -26,6 +29,31 @@ class OverlayView @JvmOverloads constructor(
         isAntiAlias = true
     }
 
+    private fun drawSunPath(canvas: Canvas, time: Long, thickness: Float, color: Int) {
+        val sp = sunPosition ?: return
+        val riseSet = sp.getSunriseSunset(time) ?: return
+
+        val paint = Paint().apply {
+            this.color = color
+            this.strokeWidth = thickness
+            style = Paint.Style.STROKE
+            isAntiAlias = true
+        }
+
+        val points = Array(PATH_POINTS) { i ->
+            val t = riseSet.sunrise + (riseSet.sunset - riseSet.sunrise) * i / (PATH_POINTS - 1)
+            val pos = sp.getSunPositionMagnetic(t)
+            project(pos.azimuth, pos.altitude)
+        }
+
+        for (i in 0 until points.size - 1) {
+            val p1 = points[i]
+            val p2 = points[i + 1]
+            if (p1 != null && p2 != null) {
+                canvas.drawLine(p1.first, p1.second, p2.first, p2.second, paint)
+            }
+        }
+    }
 
     fun setRotationMatrix(matrix: FloatArray) {
         rotationMatrix = matrix
@@ -35,6 +63,7 @@ class OverlayView @JvmOverloads constructor(
     fun setPositionAndTime(latitude: Double, longitude: Double, altitude: Double, time: Long) {
         sunPosition = SunPosition(latitude, longitude, altitude)
         referenceTime = time
+        observerLatitude = latitude
         invalidate()
     }
 
@@ -65,9 +94,30 @@ class OverlayView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
+        val solstices = sunPosition?.getSolstices(referenceTime)
+        if (solstices != null) {
+            val juneColor: Int
+            val decColor: Int
+            if (observerLatitude >= 0) {
+                juneColor = Color.BLUE
+                decColor = Color.RED
+            } else {
+                juneColor = Color.RED
+                decColor = Color.BLUE
+            }
+            drawSunPath(canvas, solstices.june, 10f, juneColor)
+            drawSunPath(canvas, solstices.december, 10f, decColor)
+        }
+
+        sunPosition?.getMarchEquinox(referenceTime)?.let {
+            drawSunPath(canvas, it, 10f, Color.GREEN)
+        }
+
+        drawSunPath(canvas, referenceTime, 3f, Color.YELLOW)
+
         val sunPos = sunPosition?.getSunPositionMagnetic(referenceTime) ?: return
         project(sunPos.azimuth, sunPos.altitude)?.let {
-            canvas.drawCircle(it.first, it.second, 20f, paintYellow)
+            canvas.drawCircle(it.first, it.second, 50f, paintYellow)
         }
     }
 }
