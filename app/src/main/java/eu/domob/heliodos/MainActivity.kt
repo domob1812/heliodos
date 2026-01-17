@@ -29,6 +29,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         cameraFeedView = findViewById(R.id.cameraFeedView)
         overlayView = findViewById(R.id.overlayView)
         overlayView.cameraFeedView = cameraFeedView
+        overlayView.setPositionAndTime(47.5, 15.0, 500.0, System.currentTimeMillis())
 
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)

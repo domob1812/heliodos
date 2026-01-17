@@ -6,6 +6,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
+import kotlin.math.cos
+import kotlin.math.sin
 
 class OverlayView @JvmOverloads constructor(
     context: Context,
@@ -15,44 +17,33 @@ class OverlayView @JvmOverloads constructor(
 
     var cameraFeedView: CameraFeedView? = null
     private var rotationMatrix: FloatArray? = null
+    private var sunPosition: SunPosition? = null
+    private var referenceTime: Long = 0
 
     private val paintYellow = Paint().apply {
         color = Color.YELLOW
         style = Paint.Style.FILL
         isAntiAlias = true
     }
-    private val paintRed = Paint().apply {
-        color = Color.RED
-        style = Paint.Style.FILL
-        isAntiAlias = true
-    }
-    private val paintGreen = Paint().apply {
-        color = Color.GREEN
-        style = Paint.Style.FILL
-        isAntiAlias = true
-    }
-    private val paintBlue = Paint().apply {
-        color = Color.BLUE
-        style = Paint.Style.FILL
-        isAntiAlias = true
-    }
-    private val paintWhite = Paint().apply {
-        color = Color.WHITE
-        style = Paint.Style.FILL
-        isAntiAlias = true
-    }
-    private val paintBlack = Paint().apply {
-        color = Color.BLACK
-        style = Paint.Style.FILL
-        isAntiAlias = true
-    }
+
 
     fun setRotationMatrix(matrix: FloatArray) {
         rotationMatrix = matrix
         invalidate()
     }
 
-    private fun project(worldX: Float, worldY: Float, worldZ: Float): Pair<Float, Float>? {
+    fun setPositionAndTime(latitude: Double, longitude: Double, altitude: Double, time: Long) {
+        sunPosition = SunPosition(latitude, longitude, altitude)
+        referenceTime = time
+        invalidate()
+    }
+
+    private fun project(azimuth: Double, altitude: Double): Pair<Float, Float>? {
+        val r = cos(altitude)
+        val worldX = (sin(azimuth) * r).toFloat()
+        val worldY = (cos(azimuth) * r).toFloat()
+        val worldZ = sin(altitude).toFloat()
+
         val camProjection = cameraFeedView?.projection ?: return null
         val R = rotationMatrix ?: return null
 
@@ -74,14 +65,9 @@ class OverlayView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // Cardinal directions
-        project(0f, 1f, 0f)?.let { canvas.drawCircle(it.first, it.second, 20f, paintYellow) }  // North
-        project(1f, 0f, 0f)?.let { canvas.drawCircle(it.first, it.second, 20f, paintRed) }     // East
-        project(0f, -1f, 0f)?.let { canvas.drawCircle(it.first, it.second, 20f, paintGreen) }  // South
-        project(-1f, 0f, 0f)?.let { canvas.drawCircle(it.first, it.second, 20f, paintBlue) }   // West
-
-        // Zenith and nadir
-        project(0f, 0f, 1f)?.let { canvas.drawCircle(it.first, it.second, 20f, paintWhite) }   // Zenith
-        project(0f, 0f, -1f)?.let { canvas.drawCircle(it.first, it.second, 20f, paintBlack) }  // Nadir
+        val sunPos = sunPosition?.getSunPositionMagnetic(referenceTime) ?: return
+        project(sunPos.azimuth, sunPos.altitude)?.let {
+            canvas.drawCircle(it.first, it.second, 20f, paintYellow)
+        }
     }
 }
