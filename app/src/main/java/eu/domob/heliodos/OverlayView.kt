@@ -29,6 +29,18 @@ class OverlayView @JvmOverloads constructor(
         isAntiAlias = true
     }
 
+    private val paintText = Paint().apply {
+        color = Color.WHITE
+        textSize = 60f
+        textAlign = Paint.Align.CENTER
+        isAntiAlias = true
+    }
+
+    private val paintBackground = Paint().apply {
+        color = Color.parseColor("#80000000")
+        style = Paint.Style.FILL
+    }
+
     private fun drawSunPath(canvas: Canvas, time: Long, thickness: Float, color: Int) {
         val sp = sunPosition ?: return
         val riseSet = sp.getSunriseSunset(time) ?: return
@@ -93,6 +105,30 @@ class OverlayView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+
+        if (sunPosition == null) {
+            val text = "Waiting for device location..."
+            val cx = width / 2f
+            val cy = height / 2f
+            
+            val fontMetrics = paintText.fontMetrics
+            val textHeight = fontMetrics.bottom - fontMetrics.top
+            val textOffset = textHeight / 2 - fontMetrics.bottom
+            
+            // Draw background rectangle for better visibility
+            val textWidth = paintText.measureText(text)
+            val padding = 20f
+            canvas.drawRect(
+                cx - textWidth / 2 - padding,
+                cy - textHeight / 2 - padding,
+                cx + textWidth / 2 + padding,
+                cy + textHeight / 2 + padding,
+                paintBackground
+            )
+            
+            canvas.drawText(text, cx, cy + textOffset, paintText)
+            return
+        }
 
         val solstices = sunPosition?.getSolstices(referenceTime)
         if (solstices != null) {
