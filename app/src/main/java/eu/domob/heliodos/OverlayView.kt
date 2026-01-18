@@ -9,7 +9,7 @@ import android.view.View
 import kotlin.math.cos
 import kotlin.math.sin
 
-private const val PATH_POINTS = 20
+private const val PATH_POINTS = 50
 
 class OverlayView @JvmOverloads constructor(
     context: Context,
@@ -43,7 +43,23 @@ class OverlayView @JvmOverloads constructor(
 
     private fun drawSunPath(canvas: Canvas, time: Long, thickness: Float, color: Int) {
         val sp = sunPosition ?: return
-        val riseSet = sp.getSunriseSunset(time) ?: return
+        val riseSet = sp.getSunriseSunset(time)
+
+        val startTime: Long
+        val endTime: Long
+        var isLoop = false
+        if (riseSet != null) {
+            startTime = riseSet.sunrise
+            endTime = riseSet.sunset
+        } else {
+            val pos = sp.getSunPosition(time)
+            if (pos.altitude < 0) {
+                return
+            }
+            startTime = time - 12 * 3600 * 1000
+            endTime = time + 12 * 3600 * 1000
+            isLoop = true
+        }
 
         val paint = Paint().apply {
             this.color = color
@@ -53,9 +69,13 @@ class OverlayView @JvmOverloads constructor(
         }
 
         val points = Array(PATH_POINTS) { i ->
-            val t = riseSet.sunrise + (riseSet.sunset - riseSet.sunrise) * i / (PATH_POINTS - 1)
+            val t = startTime + (endTime - startTime) * i / (PATH_POINTS - 1)
             val pos = sp.getSunPositionMagnetic(t)
             project(pos.azimuth, pos.altitude)
+        }
+
+        if (isLoop) {
+            points[points.lastIndex] = points[0]
         }
 
         for (i in 0 until points.size - 1) {
