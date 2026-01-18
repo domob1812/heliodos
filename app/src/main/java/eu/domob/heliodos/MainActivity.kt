@@ -19,6 +19,7 @@ import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.preference.PreferenceManager
 
 class MainActivity : AppCompatActivity(), SensorEventListener, LocationListener {
     private lateinit var cameraFeedView: CameraFeedView
@@ -33,6 +34,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener, LocationListener 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false)
         setContentView(R.layout.activity_main)
 
         cameraFeedView = findViewById(R.id.cameraFeedView)
@@ -46,8 +48,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener, LocationListener 
         cameraFeedView.onSingleTap = {
             showAboutDialog()
         }
-
-        checkAndRequestPermissions()
     }
 
     private fun showAboutDialog() {
@@ -72,11 +72,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener, LocationListener 
     }
 
     private fun checkAndRequestPermissions() {
-        val permissions = arrayOf(
-            Manifest.permission.CAMERA,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        )
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val useLocation = prefs.getBoolean("use_location", true)
+
+        val permissions = mutableListOf(Manifest.permission.CAMERA)
+        if (useLocation) {
+            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+            permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
 
         val missingPermissions = permissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
@@ -93,43 +96,90 @@ class MainActivity : AppCompatActivity(), SensorEventListener, LocationListener 
         if (cameraFeedView.isAvailable) {
             cameraFeedView.openCamera()
         }
-        startLocationUpdates()
+        updateLocationMode()
+    }
+
+    private fun updateLocationMode() {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val useLocation = prefs.getBoolean("use_location", true)
+
+        if (useLocation) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                startLocationUpdates()
+            }
+        } else {
+            locationManager.removeUpdates(this)
+            val lat = prefs.getString("manual_latitude", "51.5")?.toDoubleOrNull() ?: 51.5
+            val lon = prefs.getString("manual_longitude", "0")?.toDoubleOrNull() ?: 0.0
+            val alt = prefs.getString("manual_altitude", "0")?.toDoubleOrNull() ?: 0.0
+            updateOverlay(lat, lon, alt)
+        }
     }
 
     private fun startLocationUpdates() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            
-            val lastKnownLocationGPS = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            val lastKnownLocationNetwork = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            
-            var bestLocation = lastKnownLocationGPS
-            if (bestLocation == null || (lastKnownLocationNetwork != null && lastKnownLocationNetwork.time > bestLocation.time)) {
-                bestLocation = lastKnownLocationNetwork
-            }
+        overlayView.clearLocation()
 
-            if (bestLocation != null) {
-                onLocationChanged(bestLocation)
-            }
-
-            if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000L, 10f, this)
-            }
-            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000L, 10f, this)
-            }
+        val lastKnownLocationGPS = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+        val lastKnownLocationNetwork = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+        
+        var bestLocation = lastKnownLocationGPS
+        if (bestLocation == null || (lastKnownLocationNetwork != null && lastKnownLocationNetwork.time > bestLocation.time)) {
+            bestLocation = lastKnownLocationNetwork
         }
+
+        if (bestLocation != null) {
+            onLocationChanged(bestLocation)
+        }
+
+        if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000L, 10f, this)
+        }
+        if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000L, 10f, this)
+        }
+    }
+
+    private fun updateOverlay(latitude: Double, longitude: Double, altitude: Double) {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val useCurrentTime = prefs.getBoolean("use_current_time", true)
+        val time = if (useCurrentTime) {
+            System.currentTimeMillis()
+        } else {
+            prefs.getLong("manual_timestamp", System.currentTimeMillis())
+        }
+        overlayView.setPositionAndTime(latitude, longitude, altitude, time)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                startApp()
+            val cameraPermissionIndex = permissions.indexOf(Manifest.permission.CAMERA)
+            val cameraGranted = if (cameraPermissionIndex != -1) {
+                grantResults[cameraPermissionIndex] == PackageManager.PERMISSION_GRANTED
             } else {
-                Toast.makeText(this, "Permissions required", Toast.LENGTH_SHORT).show()
-                finish()
+                ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
             }
+
+            if (!cameraGranted) {
+                Toast.makeText(this, "Camera permission required", Toast.LENGTH_SHORT).show()
+                finish()
+                return
+            }
+
+            // Check location permissions if they were requested
+            val fineLocIndex = permissions.indexOf(Manifest.permission.ACCESS_FINE_LOCATION)
+            val coarseLocIndex = permissions.indexOf(Manifest.permission.ACCESS_COARSE_LOCATION)
+            val locationGranted = (fineLocIndex != -1 && grantResults[fineLocIndex] == PackageManager.PERMISSION_GRANTED) ||
+                                  (coarseLocIndex != -1 && grantResults[coarseLocIndex] == PackageManager.PERMISSION_GRANTED)
+
+            if (!locationGranted && (fineLocIndex != -1 || coarseLocIndex != -1)) {
+                // Location requested but denied. Switch to manual mode.
+                PreferenceManager.getDefaultSharedPreferences(this).edit().putBoolean("use_location", false).apply()
+                Toast.makeText(this, "Location denied, using manual mode", Toast.LENGTH_SHORT).show()
+            }
+
+            startApp()
         }
     }
 
@@ -146,15 +196,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener, LocationListener 
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
         }
         
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED &&
-            (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-             ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
-            
-            if (cameraFeedView.isAvailable) {
-                cameraFeedView.openCamera()
-            }
-            startLocationUpdates()
-        }
+        checkAndRequestPermissions()
     }
 
     override fun onSensorChanged(event: SensorEvent) {
@@ -169,7 +211,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener, LocationListener 
     }
 
     override fun onLocationChanged(location: Location) {
-        overlayView.setPositionAndTime(location.latitude, location.longitude, location.altitude, System.currentTimeMillis())
+        updateOverlay(location.latitude, location.longitude, location.altitude)
     }
 
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}

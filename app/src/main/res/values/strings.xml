@@ -8,4 +8,19 @@
     <string name="about_version_format">%s</string>
     <string name="about_license">This application is Free Software licensed under the GNU General Public License v3.</string>
     <string name="github_link">https://github.com/domob1812/heliodos</string>
+
+    <!-- Preferences -->
+    <string name="pref_category_location">Location</string>
+    <string name="pref_use_location">Use device location</string>
+    <string name="pref_manual_latitude">Latitude</string>
+    <string name="pref_manual_longitude">Longitude</string>
+    <string name="pref_manual_altitude">Altitude</string>
+    <string name="pref_category_time">Time</string>
+    <string name="pref_use_current_time">Use current time</string>
+    <string name="pref_manual_date">Date</string>
+    <string name="pref_manual_time">Time</string>
+
+    <string name="error_invalid_latitude">Latitude must be between -90 and 90.</string>
+    <string name="error_invalid_longitude">Longitude must be between -180 and 180.</string>
+    <string name="error_invalid_number">Invalid number format.</string>
 </resources>

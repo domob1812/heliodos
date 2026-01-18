@@ -1,12 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <androidx.preference.PreferenceCategory android:title="General">
+    <androidx.preference.PreferenceCategory android:title="@string/pref_category_location">
         <androidx.preference.SwitchPreferenceCompat
-            android:key="demo_setting"
-            android:title="Demo Setting"
-            android:summary="This is a placeholder setting"
-            android:defaultValue="true" />
+            android:defaultValue="true"
+            android:key="use_location"
+            android:title="@string/pref_use_location" />
+
+        <androidx.preference.EditTextPreference
+            android:defaultValue="0"
+            android:key="manual_latitude"
+            android:title="@string/pref_manual_latitude"
+            app:useSimpleSummaryProvider="true" />
+
+        <androidx.preference.EditTextPreference
+            android:defaultValue="0"
+            android:key="manual_longitude"
+            android:title="@string/pref_manual_longitude"
+            app:useSimpleSummaryProvider="true" />
+
+        <androidx.preference.EditTextPreference
+            android:defaultValue="0"
+            android:key="manual_altitude"
+            android:title="@string/pref_manual_altitude"
+            app:useSimpleSummaryProvider="true" />
+    </androidx.preference.PreferenceCategory>
+
+    <androidx.preference.PreferenceCategory android:title="@string/pref_category_time">
+        <androidx.preference.SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="use_current_time"
+            android:title="@string/pref_use_current_time" />
+
+        <androidx.preference.Preference
+            android:key="manual_date"
+            android:title="@string/pref_manual_date" />
+
+        <androidx.preference.Preference
+            android:key="manual_time"
+            android:title="@string/pref_manual_time" />
     </androidx.preference.PreferenceCategory>
 
 </androidx.preference.PreferenceScreen>

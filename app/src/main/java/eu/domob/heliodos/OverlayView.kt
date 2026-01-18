@@ -79,6 +79,11 @@ class OverlayView @JvmOverloads constructor(
         invalidate()
     }
 
+    fun clearLocation() {
+        sunPosition = null
+        invalidate()
+    }
+
     private fun project(azimuth: Double, altitude: Double): Pair<Float, Float>? {
         val r = cos(altitude)
         val worldX = (sin(azimuth) * r).toFloat()
