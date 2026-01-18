@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <androidx.preference.PreferenceCategory android:title="General">
+        <androidx.preference.SwitchPreferenceCompat
+            android:key="demo_setting"
+            android:title="Demo Setting"
+            android:summary="This is a placeholder setting"
+            android:defaultValue="true" />
+    </androidx.preference.PreferenceCategory>
+
+</androidx.preference.PreferenceScreen>

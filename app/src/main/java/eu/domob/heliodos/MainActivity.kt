@@ -11,6 +11,11 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import android.content.Intent
+import android.view.LayoutInflater
+import android.widget.TextView
+import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -38,7 +43,32 @@ class MainActivity : AppCompatActivity(), SensorEventListener, LocationListener 
         rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
 
+        cameraFeedView.onSingleTap = {
+            showAboutDialog()
+        }
+
         checkAndRequestPermissions()
+    }
+
+    private fun showAboutDialog() {
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_about, null)
+        
+        val tvVersion = view.findViewById<TextView>(R.id.tvVersion)
+        tvVersion.text = getString(R.string.about_version_format, BuildConfig.VERSION_NAME)
+        
+        val tvGitHub = view.findViewById<TextView>(R.id.tvGitHub)
+        tvGitHub.setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.github_link)))
+            startActivity(intent)
+        }
+
+        AlertDialog.Builder(this)
+            .setView(view)
+            .setPositiveButton(android.R.string.ok, null)
+            .setNeutralButton(R.string.action_settings) { _, _ ->
+                startActivity(Intent(this, SettingsActivity::class.java))
+            }
+            .show()
     }
 
     private fun checkAndRequestPermissions() {

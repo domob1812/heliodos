@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Heliodos</string>
+    <string name="about_title">About Heliodos</string>
+    <string name="about_message">Heliodos displays the sun\'s position using Augmented Reality.\n\nTap the screen to open this dialog.</string>
+    <string name="action_settings">Settings</string>
+    <string name="settings_title">Settings</string>
+    <string name="about_version_format">%s</string>
+    <string name="about_license">This application is Free Software licensed under the GNU General Public License v3.</string>
+    <string name="github_link">https://github.com/domob1812/heliodos</string>
 </resources>

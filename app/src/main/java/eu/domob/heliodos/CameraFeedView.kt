@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.*
 import android.util.AttributeSet
+import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.Surface
@@ -27,6 +28,15 @@ class CameraFeedView @JvmOverloads constructor(
 
     private var cumulativeScale: Float = 1f
     private var switchedDuringGesture: Boolean = false
+
+    var onSingleTap: (() -> Unit)? = null
+
+    private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+        override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+            onSingleTap?.invoke()
+            return true
+        }
+    })
 
     private val scaleGestureDetector = ScaleGestureDetector(context,
         object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
@@ -68,6 +78,7 @@ class CameraFeedView @JvmOverloads constructor(
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         scaleGestureDetector.onTouchEvent(event)
+        gestureDetector.onTouchEvent(event)
         return true
     }
 
