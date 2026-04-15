@@ -1,0 +1,7 @@
+Initial release of Heliodos.
+
+Features:
+- AR overlay of the sun path and position over the camera feed
+- Shows sun paths at solstices, equinoxes and the current date/time
+- Location from GPS or custom set to any place on Earth
+- Current time or custom set time

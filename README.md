@@ -1,14 +1,15 @@
 # Heliodos
 
-Heliodos is an augmented reality (AR) Android application that overlays the sun's trajectory onto a live camera feed. It displays the sun's path at the solstices, equinox, and the current time.
+Heliodos is an augmented reality (AR) Android application that overlays the sun's trajectory onto a live camera feed. Stand in your garden, on a building plot, or any outdoor space, point your camera at the sky, and see the sun's arc for the summer solstice, winter solstice, equinox, and the current date and time — including any obstacles in the sun's path.
 
-This visualization is particularly useful for planning in gardening or real estate, helping you understand sunlight exposure throughout the year.
+This is particularly useful for planning in gardening or real estate, helping you assess sunlight at any location throughout the year.
 
 ## Features
 
-*   **AR Sun Trajectories**: View the sun's path for key dates (solstices, equinox) and the current time overlaid on the real world.
-*   **Camera Selection**: Pinch to zoom to iterate through available physical back cameras (e.g., wide angle, normal, telephoto).
-*   **Settings & About**: Tap on the screen to open the about dialog and access settings.
+*   **AR Sun Trajectories**: View the sun's path for the solstices, the equinox, and the current moment overlaid on the live camera image.
+*   **Flexible Location**: Uses your GPS location automatically, or lets you set any place on Earth manually.
+*   **Custom Time**: Simulate the sun's position at any time of day, not just right now.
+*   **Camera Selection**: Pinch to zoom to cycle through available back cameras (wide-angle, normal, telephoto).
 
 ## License
 
