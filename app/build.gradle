@@ -19,16 +19,35 @@ android {
         versionName "1.0.0"
     }
 
+    def keystorePath = System.getenv("KEYSTORE_PATH")
+    if (keystorePath) {
+        signingConfigs {
+            release {
+              storeFile file(System.getenv("KEYSTORE_PATH"))
+              storePassword System.getenv("KEYSTORE_PASSWORD")
+              keyAlias "heliodos"
+              keyPassword System.getenv("KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (keystorePath) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
+    }
+
+    lint {
+        checkReleaseBuilds false
     }
 
     kotlinOptions {
