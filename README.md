@@ -6,7 +6,7 @@ This is particularly useful for planning in gardening or real estate, helping yo
 
 ## Features
 
-*   **AR Sun and Moon Trajectories**: View the sun's path for the solstices, the equinox, and the current moment, as well as the moon's current trajectory, overlaid on the live camera image.
+*   **AR Sun and Moon Trajectories**: View the sun's path for the solstices, the equinox, and the current moment, as well as the moon's current trajectory, overlaid on the live camera image. Hour ticks with time labels show the time of day along the current paths.
 *   **Flexible Location**: Uses your GPS location automatically, or lets you set any place on Earth manually.
 *   **Custom Time**: Simulate the sun's position at any time of day, not just right now.
 *   **Camera Selection**: Pinch to zoom to cycle through available back cameras (wide-angle, normal, telephoto).

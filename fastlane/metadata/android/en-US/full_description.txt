@@ -5,7 +5,7 @@ Stand in your garden, on a building plot, or any outdoor space, point your camer
 <b>Features</b>
 
 <ul>
-<li><b>AR sun and moon trajectories</b>: The sun's path for the solstices, the equinox, and the current moment — plus the moon's current trajectory — are drawn directly over the live camera image.</li>
+<li><b>AR sun and moon trajectories</b>: The sun's path for the solstices, the equinox, and the current moment — plus the moon's current trajectory — are drawn directly over the live camera image, with hour tick marks and time labels on the current paths.</li>
 <li><b>Customisable paths</b>: Toggle individual paths on or off and pick custom colours for each in the settings.</li>
 <li><b>Flexible location</b>: Uses your GPS location automatically, or lets you set any place on Earth manually.</li>
 <li><b>Custom time</b>: Simulate the sun's position at any time of day, not just right now.</li>

@@ -2,3 +2,4 @@
 - The colours for the paths can be configured in settings
 - The moon (current trajectory/position) is now also supported (but disabled
   by default in the settings)
+- Hour ticks with time labels are shown on the current sun and moon paths

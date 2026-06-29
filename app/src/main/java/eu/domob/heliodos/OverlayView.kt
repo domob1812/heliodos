@@ -15,6 +15,7 @@ import kotlin.math.sqrt
 private const val PATH_POINTS = 50
 private const val HOUR_TICK_LENGTH = 30f
 private const val HOUR_TICK_TANGENT_DELTA_MS = 30_000L
+private const val HOUR_TICK_LABEL_GAP = 6f
 
 class OverlayView @JvmOverloads constructor(
     context: Context,
@@ -43,6 +44,12 @@ class OverlayView @JvmOverloads constructor(
     private val paintBackground = Paint().apply {
         color = Color.parseColor("#80000000")
         style = Paint.Style.FILL
+    }
+
+    private val paintLabel = Paint().apply {
+        textSize = 30f
+        textAlign = Paint.Align.CENTER
+        isAntiAlias = true
     }
 
     private fun drawBodyPath(canvas: Canvas, bp: BodyPosition, time: Long, thickness: Float, color: Int) {
@@ -91,26 +98,34 @@ class OverlayView @JvmOverloads constructor(
     }
 
     private fun drawHourTicks(canvas: Canvas, bp: BodyPosition, time: Long, color: Int) {
-        val timestamps = bp.getFullHourTimestamps(time)
-        if (timestamps.isEmpty()) return
+        val ticks = bp.getFullHourTimestamps(time)
+        if (ticks.isEmpty()) return
 
-        val paint = Paint().apply {
+        val paintTick = Paint().apply {
             this.color = color
             strokeWidth = 3f
             style = Paint.Style.STROKE
             isAntiAlias = true
         }
 
-        val halfLen = HOUR_TICK_LENGTH / 2f
+        paintLabel.color = color
 
-        for (ts in timestamps) {
-            val center = bp.getPositionMagnetic(ts)
+        val halfLen = HOUR_TICK_LENGTH / 2f
+        val fontMetrics = paintLabel.fontMetrics
+        val textHeight = fontMetrics.bottom - fontMetrics.top
+        val textOffsetY = textHeight / 2 - fontMetrics.bottom
+        val padding = 4f
+        val boxHalfHeight = textHeight / 2 + padding
+        val labelOffset = halfLen + boxHalfHeight + HOUR_TICK_LABEL_GAP
+
+        for (tick in ticks) {
+            val center = bp.getPositionMagnetic(tick.millis)
             val centerPt = project(center.azimuth, center.altitude) ?: continue
 
-            val before = bp.getPositionMagnetic(ts - HOUR_TICK_TANGENT_DELTA_MS)
+            val before = bp.getPositionMagnetic(tick.millis - HOUR_TICK_TANGENT_DELTA_MS)
             val beforePt = project(before.azimuth, before.altitude) ?: continue
 
-            val after = bp.getPositionMagnetic(ts + HOUR_TICK_TANGENT_DELTA_MS)
+            val after = bp.getPositionMagnetic(tick.millis + HOUR_TICK_TANGENT_DELTA_MS)
             val afterPt = project(after.azimuth, after.altitude) ?: continue
 
             val dx = afterPt.first - beforePt.first
@@ -126,7 +141,28 @@ class OverlayView @JvmOverloads constructor(
             val x2 = centerPt.first + nx * halfLen
             val y2 = centerPt.second + ny * halfLen
 
-            canvas.drawLine(x1, y1, x2, y2, paint)
+            canvas.drawLine(x1, y1, x2, y2, paintTick)
+
+            val labelX = centerPt.first + nx * labelOffset
+            val labelY = centerPt.second + ny * labelOffset
+
+            val labelText = "${tick.localHour}h"
+            val textWidth = paintLabel.measureText(labelText)
+
+            canvas.save()
+            canvas.translate(labelX, labelY)
+            canvas.rotate(-Math.toDegrees(Math.atan2(nx.toDouble(), ny.toDouble())).toFloat())
+
+            canvas.drawRect(
+                -textWidth / 2 - padding,
+                -boxHalfHeight,
+                textWidth / 2 + padding,
+                boxHalfHeight,
+                paintBackground
+            )
+            canvas.drawText(labelText, 0f, textOffsetY, paintLabel)
+
+            canvas.restore()
         }
     }
 
