@@ -10,8 +10,11 @@ import androidx.preference.PreferenceManager
 import io.github.cosinekitty.astronomy.Body
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 private const val PATH_POINTS = 50
+private const val HOUR_TICK_LENGTH = 30f
+private const val HOUR_TICK_TANGENT_DELTA_MS = 30_000L
 
 class OverlayView @JvmOverloads constructor(
     context: Context,
@@ -84,6 +87,46 @@ class OverlayView @JvmOverloads constructor(
             if (p1 != null && p2 != null) {
                 canvas.drawLine(p1.first, p1.second, p2.first, p2.second, paint)
             }
+        }
+    }
+
+    private fun drawHourTicks(canvas: Canvas, bp: BodyPosition, time: Long, color: Int) {
+        val timestamps = bp.getFullHourTimestamps(time)
+        if (timestamps.isEmpty()) return
+
+        val paint = Paint().apply {
+            this.color = color
+            strokeWidth = 3f
+            style = Paint.Style.STROKE
+            isAntiAlias = true
+        }
+
+        val halfLen = HOUR_TICK_LENGTH / 2f
+
+        for (ts in timestamps) {
+            val center = bp.getPositionMagnetic(ts)
+            val centerPt = project(center.azimuth, center.altitude) ?: continue
+
+            val before = bp.getPositionMagnetic(ts - HOUR_TICK_TANGENT_DELTA_MS)
+            val beforePt = project(before.azimuth, before.altitude) ?: continue
+
+            val after = bp.getPositionMagnetic(ts + HOUR_TICK_TANGENT_DELTA_MS)
+            val afterPt = project(after.azimuth, after.altitude) ?: continue
+
+            val dx = afterPt.first - beforePt.first
+            val dy = afterPt.second - beforePt.second
+            val len = sqrt(dx * dx + dy * dy)
+            if (len < 0.001f) continue
+
+            val nx = -dy / len
+            val ny = dx / len
+
+            val x1 = centerPt.first - nx * halfLen
+            val y1 = centerPt.second - ny * halfLen
+            val x2 = centerPt.first + nx * halfLen
+            val y2 = centerPt.second + ny * halfLen
+
+            canvas.drawLine(x1, y1, x2, y2, paint)
         }
     }
 
@@ -208,7 +251,7 @@ class OverlayView @JvmOverloads constructor(
         if (pathEnabled["sun_current"] == true) {
             val currentColor = pathColors["sun_current"] ?: Color.YELLOW
             drawBodyPath(canvas, sun, referenceTime, 3f, currentColor)
-
+            drawHourTicks(canvas, sun, referenceTime, currentColor)
             val sunPos = sun.getPositionMagnetic(referenceTime)
             project(sunPos.azimuth, sunPos.altitude)?.let {
                 val paint = Paint().apply {
@@ -224,7 +267,7 @@ class OverlayView @JvmOverloads constructor(
             bodyPositionMoon?.let { moon ->
                 val moonColor = pathColors["moon_current"] ?: Color.WHITE
                 drawBodyPath(canvas, moon, referenceTime, 3f, moonColor)
-
+                drawHourTicks(canvas, moon, referenceTime, moonColor)
                 val moonPos = moon.getPositionMagnetic(referenceTime)
                 project(moonPos.azimuth, moonPos.altitude)?.let {
                     val paint = Paint().apply {
