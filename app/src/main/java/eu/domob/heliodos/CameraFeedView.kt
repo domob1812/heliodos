@@ -106,25 +106,22 @@ class CameraFeedView @JvmOverloads constructor(
         val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         try {
             if (sortedCameraIds.isEmpty()) {
-                val backCameras = manager.cameraIdList
+                sortedCameraIds = manager.cameraIdList
                     .filter { id ->
                         val characteristics = manager.getCameraCharacteristics(id)
                         characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK
                     }
+                    .flatMap { id ->
+                        val characteristics = manager.getCameraCharacteristics(id)
+                        val physicalIds = characteristics.getPhysicalCameraIds()
+                        if (physicalIds.isNotEmpty()) {
+                            physicalIds.toList()
+                        } else {
+                            listOf(id)
+                        }
+                    }
+                    .distinct()
                     .sortedBy { id -> getFocalLength(manager, id) }
-
-                // Filter out logical multi-camera devices that combine physical cameras
-                // These report LOGICAL_MULTI_CAMERA capability and have physical camera IDs
-                sortedCameraIds = backCameras.filter { id ->
-                    val characteristics = manager.getCameraCharacteristics(id)
-                    val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
-                    capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA) != true
-                }
-
-                // Fallback: if filtering removed all cameras, use the original list
-                if (sortedCameraIds.isEmpty()) {
-                    sortedCameraIds = backCameras
-                }
             }
 
             if (sortedCameraIds.isEmpty()) {
