@@ -1,7 +1,10 @@
 package eu.domob.heliodos
 
 import android.hardware.camera2.CameraCharacteristics
+import android.util.Log
 import android.util.SizeF
+
+private const val TAG = "HeliodosCamera"
 
 class CameraProjection(characteristics: CameraCharacteristics) {
 
@@ -24,6 +27,12 @@ class CameraProjection(characteristics: CameraCharacteristics) {
             ?: android.util.Size(4000, 3000)
 
         sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
+
+        Log.d(
+            TAG,
+            "Projection: focal=$focalLengthMm mm, sensor=${sensorSizeMm.width}x${sensorSizeMm.height} mm, " +
+                "pixels=${sensorSizePx.width}x${sensorSizePx.height}, orientation=$sensorOrientation"
+        )
     }
 
     fun setViewSize(width: Int, height: Int) {
