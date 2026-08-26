@@ -3,3 +3,4 @@
 - The moon (current trajectory/position) is now also supported (but disabled
   by default in the settings)
 - Hour ticks with time labels are shown on the current sun and moon paths
+- Improved selection of cameras that can be used on some devices
