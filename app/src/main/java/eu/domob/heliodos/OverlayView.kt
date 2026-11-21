@@ -8,6 +8,9 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.preference.PreferenceManager
 import io.github.cosinekitty.astronomy.Body
+import kotlin.math.abs
+import kotlin.math.asin
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -16,6 +19,42 @@ private const val PATH_POINTS = 50
 private const val HOUR_TICK_LENGTH = 30f
 private const val HOUR_TICK_TANGENT_DELTA_MS = 30_000L
 private const val HOUR_TICK_LABEL_GAP = 6f
+private const val CROSSHAIR_INNER_GAP_DP = 4f
+private const val CROSSHAIR_OUTER_RADIUS_DP = 14f
+private const val CROSSHAIR_OUTLINE_STROKE_DP = 2.6f
+private const val CROSSHAIR_STROKE_DP = 1.2f
+private const val CROSSHAIR_LABEL_GAP_DP = 8f
+private const val CROSSHAIR_LABEL_PADDING_X_DP = 5f
+private const val CROSSHAIR_LABEL_PADDING_Y_DP = 4f
+private const val CROSSHAIR_LABEL_LINE_GAP_DP = 2f
+private const val CROSSHAIR_LABEL_TEXT_DP = 13f
+
+/**
+ * Computes the magnetic (azimuth, altitude) in radians at the view centre.
+ *
+ * In CameraProjection's symmetric centre-crop pinhole model, the view centre
+ * (width/2, height/2) always maps to the camera optical axis (0, 0, 1), i.e.
+ * device (0, 0, -1). Since project() rotates world -> device by R^T, rotating
+ * back by R gives world = (-R[2], -R[5], -R[8]), matching the drawn paths.
+ */
+private fun viewCenterDirection(R: FloatArray): BodyPosition.AzimuthAltitude {
+    val altitude = asin((-R[8]).toDouble().coerceIn(-1.0, 1.0))
+    var azimuth = atan2((-R[2]).toDouble(), (-R[5]).toDouble())
+    if (azimuth < 0.0) {
+        azimuth += 2.0 * Math.PI
+    }
+    return BodyPosition.AzimuthAltitude(azimuth, altitude)
+}
+
+private fun normalizeAzimuthDegrees(degrees: Double): Double {
+    val wrapped = ((degrees % 360.0) + 360.0) % 360.0
+    val roundedTenths = Math.round(wrapped * 10.0) % 3600L
+    return roundedTenths / 10.0
+}
+
+private fun normalizeZeroDegrees(degrees: Double): Double {
+    return if (abs(degrees) < 0.05) 0.0 else degrees
+}
 
 class OverlayView @JvmOverloads constructor(
     context: Context,
@@ -29,10 +68,15 @@ class OverlayView @JvmOverloads constructor(
     private var bodyPositionMoon: BodyPosition? = null
     private var referenceTime: Long = 0
     private var observerLatitude: Double = 0.0
+    private var magneticDeclinationRad: Double? = null
 
     private var prefsLoaded = false
     private val pathEnabled = mutableMapOf<String, Boolean>()
     private val pathColors = mutableMapOf<String, Int>()
+    private var showCrosshair = false
+    private var crosshairMagnetic = false
+
+    private val density = resources.displayMetrics.density
 
     private val paintText = Paint().apply {
         color = Color.WHITE
@@ -49,6 +93,29 @@ class OverlayView @JvmOverloads constructor(
     private val paintLabel = Paint().apply {
         textSize = 30f
         textAlign = Paint.Align.CENTER
+        isAntiAlias = true
+    }
+
+    private val paintCrosshairOutline = Paint().apply {
+        color = Color.parseColor("#B3000000")
+        strokeWidth = CROSSHAIR_OUTLINE_STROKE_DP * density
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        isAntiAlias = true
+    }
+
+    private val paintCrosshair = Paint().apply {
+        color = Color.WHITE
+        strokeWidth = CROSSHAIR_STROKE_DP * density
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        isAntiAlias = true
+    }
+
+    private val paintCrosshairText = Paint().apply {
+        color = Color.WHITE
+        textSize = CROSSHAIR_LABEL_TEXT_DP * density
+        textAlign = Paint.Align.LEFT
         isAntiAlias = true
     }
 
@@ -172,16 +239,19 @@ class OverlayView @JvmOverloads constructor(
     }
 
     fun setPositionAndTime(latitude: Double, longitude: Double, altitude: Double, time: Long) {
-        bodyPositionSun = BodyPosition(latitude, longitude, altitude, Body.Sun)
+        val sun = BodyPosition(latitude, longitude, altitude, Body.Sun)
+        bodyPositionSun = sun
         bodyPositionMoon = BodyPosition(latitude, longitude, altitude, Body.Moon)
         referenceTime = time
         observerLatitude = latitude
+        magneticDeclinationRad = sun.getMagneticDeclination(time)
         invalidate()
     }
 
     fun clearLocation() {
         bodyPositionSun = null
         bodyPositionMoon = null
+        magneticDeclinationRad = null
         invalidate()
     }
 
@@ -202,6 +272,8 @@ class OverlayView @JvmOverloads constructor(
         pathColors["equinox"] = prefs.getInt("color_equinox", Color.GREEN)
         pathColors["sun_current"] = prefs.getInt("color_sun_current", Color.YELLOW)
         pathColors["moon_current"] = prefs.getInt("color_moon_current", Color.WHITE)
+        showCrosshair = prefs.getBoolean("show_crosshair", false)
+        crosshairMagnetic = prefs.getBoolean("crosshair_magnetic", false)
     }
 
     private fun project(azimuth: Double, altitude: Double): Pair<Float, Float>? {
@@ -223,6 +295,78 @@ class OverlayView @JvmOverloads constructor(
 
         camProjection.setViewSize(width, height)
         return camProjection.project(cameraX, cameraY, cameraZ)
+    }
+
+    private fun drawCrosshairArms(
+        canvas: Canvas,
+        cx: Float,
+        cy: Float,
+        innerGap: Float,
+        outerRadius: Float,
+        paint: Paint
+    ) {
+        canvas.drawLine(cx - outerRadius, cy, cx - innerGap, cy, paint)
+        canvas.drawLine(cx + innerGap, cy, cx + outerRadius, cy, paint)
+        canvas.drawLine(cx, cy - outerRadius, cx, cy - innerGap, paint)
+        canvas.drawLine(cx, cy + innerGap, cx, cy + outerRadius, paint)
+    }
+
+    private fun drawCrosshair(canvas: Canvas) {
+        val cx = width / 2f
+        val cy = height / 2f
+
+        val innerGap = CROSSHAIR_INNER_GAP_DP * density
+        val outerRadius = CROSSHAIR_OUTER_RADIUS_DP * density
+
+        drawCrosshairArms(canvas, cx, cy, innerGap, outerRadius, paintCrosshairOutline)
+        drawCrosshairArms(canvas, cx, cy, innerGap, outerRadius, paintCrosshair)
+
+        val matrix = rotationMatrix ?: return
+        val centerPos = viewCenterDirection(matrix)
+
+        val azRad = if (crosshairMagnetic) {
+            centerPos.azimuth
+        } else {
+            val declination = magneticDeclinationRad ?: return
+            centerPos.azimuth + declination
+        }
+
+        val azDeg = normalizeAzimuthDegrees(Math.toDegrees(azRad))
+        val altDeg = normalizeZeroDegrees(Math.toDegrees(centerPos.altitude))
+
+        val azText = context.getString(
+            if (crosshairMagnetic) R.string.crosshair_azimuth_magnetic else R.string.crosshair_azimuth_true,
+            azDeg
+        )
+        val altText = context.getString(R.string.crosshair_altitude, altDeg)
+
+        val fontMetrics = paintCrosshairText.fontMetrics
+        val lineHeight = fontMetrics.bottom - fontMetrics.top
+        val lineGap = CROSSHAIR_LABEL_LINE_GAP_DP * density
+        val padX = CROSSHAIR_LABEL_PADDING_X_DP * density
+        val padY = CROSSHAIR_LABEL_PADDING_Y_DP * density
+
+        val textWidth = maxOf(
+            paintCrosshairText.measureText(azText),
+            paintCrosshairText.measureText(altText)
+        )
+        val boxHeight = lineHeight * 2 + lineGap + padY * 2
+        val boxLeft = cx + outerRadius + CROSSHAIR_LABEL_GAP_DP * density
+        val boxTop = cy - boxHeight / 2f
+
+        canvas.drawRect(
+            boxLeft,
+            boxTop,
+            boxLeft + textWidth + padX * 2,
+            boxTop + boxHeight,
+            paintBackground
+        )
+
+        val textX = boxLeft + padX
+        val line1Baseline = boxTop + padY - fontMetrics.top
+        val line2Baseline = line1Baseline + lineHeight + lineGap
+        canvas.drawText(azText, textX, line1Baseline, paintCrosshairText)
+        canvas.drawText(altText, textX, line2Baseline, paintCrosshairText)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -314,6 +458,10 @@ class OverlayView @JvmOverloads constructor(
                     canvas.drawCircle(it.first, it.second, 50f, paint)
                 }
             }
+        }
+
+        if (showCrosshair) {
+            drawCrosshair(canvas)
         }
     }
 }

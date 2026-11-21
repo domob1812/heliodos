@@ -11,6 +11,7 @@ This is particularly useful for planning in gardening or real estate, helping yo
 *   **Custom Time**: Simulate the sun's position at any time of day, not just right now.
 *   **Camera Selection**: Pinch to zoom to cycle through available back cameras (wide-angle, normal, telephoto).
 *   **Customisable Colours**: Toggle individual paths on or off and pick custom colours for each in the settings.
+*   **Crosshair Readout**: Optionally display a centre crosshair with the azimuth (true or magnetic north) and altitude where the camera is pointing.
 
 ## License
 

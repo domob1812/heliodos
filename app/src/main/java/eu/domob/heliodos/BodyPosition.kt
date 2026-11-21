@@ -32,20 +32,21 @@ class BodyPosition(
         )
     }
 
-    fun getPositionMagnetic(timeMillis: Long): AzimuthAltitude {
-        val truePos = getPosition(timeMillis)
-
+    fun getMagneticDeclination(timeMillis: Long): Double {
         val geoField = GeomagneticField(
             latitude.toFloat(),
             longitude.toFloat(),
             altitude.toFloat(),
             timeMillis
         )
-        val declination = geoField.declination // in degrees
-        val declinationRad = Math.toRadians(declination.toDouble())
+        return Math.toRadians(geoField.declination.toDouble())
+    }
+
+    fun getPositionMagnetic(timeMillis: Long): AzimuthAltitude {
+        val truePos = getPosition(timeMillis)
 
         return AzimuthAltitude(
-            truePos.azimuth - declinationRad,
+            truePos.azimuth - getMagneticDeclination(timeMillis),
             truePos.altitude
         )
     }
