@@ -27,6 +27,17 @@
     <string name="pref_show_sun_current">Sun current</string>
     <string name="pref_show_moon_current">Moon current</string>
 
+    <string name="pref_category_crosshair">Crosshair</string>
+    <string name="pref_show_crosshair">Show crosshair</string>
+    <string name="pref_show_crosshair_summary">Display centre crosshair with azimuth and altitude</string>
+    <string name="pref_crosshair_magnetic">Use magnetic north</string>
+    <string name="pref_crosshair_magnetic_summary_off">Show azimuth relative to true north</string>
+    <string name="pref_crosshair_magnetic_summary_on">Show azimuth relative to magnetic north</string>
+
+    <string name="crosshair_azimuth_true">Az %.1f° T</string>
+    <string name="crosshair_azimuth_magnetic">Az %.1f° M</string>
+    <string name="crosshair_altitude">Alt %.1f°</string>
+
     <string name="error_invalid_latitude">Latitude must be between -90 and 90.</string>
     <string name="error_invalid_longitude">Longitude must be between -180 and 180.</string>
     <string name="error_invalid_number">Invalid number format.</string>

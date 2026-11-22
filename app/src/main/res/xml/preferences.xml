@@ -79,4 +79,20 @@
             app:defaultColor="#FFFFFFFF" />
     </androidx.preference.PreferenceCategory>
 
+    <androidx.preference.PreferenceCategory android:title="@string/pref_category_crosshair">
+        <androidx.preference.SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="show_crosshair"
+            android:summary="@string/pref_show_crosshair_summary"
+            android:title="@string/pref_show_crosshair" />
+
+        <androidx.preference.SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:dependency="show_crosshair"
+            android:key="crosshair_magnetic"
+            android:summaryOff="@string/pref_crosshair_magnetic_summary_off"
+            android:summaryOn="@string/pref_crosshair_magnetic_summary_on"
+            android:title="@string/pref_crosshair_magnetic" />
+    </androidx.preference.PreferenceCategory>
+
 </androidx.preference.PreferenceScreen>
