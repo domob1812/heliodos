@@ -1,0 +1,2 @@
+- Optional crosshair at the view centre showing the azimuth (true or magnetic
+  north) and altitude it points at (disabled by default in the settings)
